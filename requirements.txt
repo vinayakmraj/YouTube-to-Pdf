@@ -3,4 +3,4 @@ requests
 pytube
 moviepy
 fpdf
-opencv-python
+#opencv-python
