@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Video to PDF</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f8f9fa;
+    }
+    .container {
+      background: #0fbadc;
+      padding: 40px;
+      width: 800px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(17, 77, 207, 0.433);
+    }
+    .form-control {
+      border-radius: 20px;
+    }
+    #videoIframe {
+      border-radius: 10px;
+    }
+    #progress {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+<body>
+  <div class="container text-center">
+    <h1 class="mt-5" style="margin-bottom: 30px;">Video to PDF</h1>
+    <form id="videoForm" method="post">
+      <div class="form-group">
+        <!-- <label for="video_url">YouTube Video URL</label> -->
+        <input type="text" class="form-control" id="video_url" name="video_url" placeholder="Enter YouTube video URL" required>
+      </div>
+      <div class="form-group">
+        <button type="button" class="btn btn-primary" id="getInfoBtn" style="margin-top: 30px;">Get Video Info</button>
+      </div>
+    </form>
+    <div id="videoInfo" style="display: none;">
+      <h3>Video Info:</h3>
+      <p><strong>Title:</strong> <span id="videoTitle"></span></p>
+      <div id="videoPlayer" class="embed-responsive embed-responsive-16by9">
+        <iframe class="embed-responsive-item" id="videoIframe" src="" allowfullscreen></iframe>
+      </div>
+      <div class="form-group mt-3">
+        <label for="video_quality">Select Video Quality</label>
+        <select class="form-control" id="video_quality" name="video_quality">
+          <!-- Options will be populated by JavaScript -->
+        </select>
+      </div>
+      <div class="form-group mt-3">
+        <label for="frame_interval">Frame Interval (seconds)</label>
+        <input type="number" class="form-control" id="frame_interval" name="frame_interval" placeholder="Enter frame interval for PDF" value="1" min="0.1" step="0.1" required>
+      </div>
+      <div class="form-group mt-3">
+        <button type="button" class="btn btn-primary" id="downloadVideoBtn">Download Video</button>
+        <button type="button" class="btn btn-success" id="downloadAudioBtn">Download Audio</button>
+        <button type="button" class="btn btn-info" id="generatePdfBtn" style="background: #e60707;">Generate PDF</button>
+      </div>
+    </div>
+    <div id="progress" class="alert alert-info" style="display: none;">
+      Download started...
+    </div>
+  </div>
+  <script>
+    $(document).ready(function() {
+      // Handle Get Video Info button click
+      $('#getInfoBtn').click(function() {
+        var video_url = $('#video_url').val();
+        var video_id = video_url.split('v=')[1];
+        var ampersandPosition = video_id.indexOf('&');
+        if(ampersandPosition != -1) {
+          video_id = video_id.substring(0, ampersandPosition);
+        }
+        // Fetch video information
+        $.post('/get_video_info', { video_url: video_url }, function(data) {
+          if(data.error) {
+            alert(data.error);
+            return;
+          }
+          // Display video information
+          $('#videoTitle').text(data.video_info.title);
+          $('#videoIframe').attr('src', 'https://www.youtube.com/embed/' + video_id);
+          $('#video_quality').empty();
+          data.streams_info.forEach(function(stream) {
+            $('#video_quality').append('<option value="' + stream.itag + '">' + stream.resolution + ' (' + stream.mime_type + ')</option>');
+          });
+          $('#videoInfo').show();
+        });
+      });
+      // Handle Download Video button click
+      $('#downloadVideoBtn').click(function() {
+        $('#progress').show();
+        var video_url = $('#video_url').val();
+        var itag = $('#video_quality').val();
+        // Initiate video download
+        $.post('/download_video', { video_url: video_url, itag: itag }, function(data) {
+          $('#progress').hide();
+          window.location.href = data;
+        }).fail(function() {
+          $('#progress').hide();
+          alert('Error downloading video.');
+        });
+      });
+      // Handle Download Audio button click
+      $('#downloadAudioBtn').click(function() {
+        $('#progress').show();
+        var video_url = $('#video_url').val();
+        // Initiate audio download
+        $.post('/download_audio', { video_url: video_url }, function(data) {
+          $('#progress').hide();
+          window.location.href = data;
+        }).fail(function() {
+          $('#progress').hide();
+          alert('Error downloading audio.');
+        });
+      });
+      // Handle Generate PDF button click
+      $('#generatePdfBtn').click(function() {
+        $('#progress').show();
+        var video_url = $('#video_url').val();
+        var frame_interval = $('#frame_interval').val();
+        // Initiate PDF generation
+        $.post('/generate_pdf', { video_url: video_url, frame_interval: frame_interval }, function(data) {
+          $('#progress').hide();
+          window.location.href = data;
+        }).fail(function() {
+          $('#progress').hide();
+          alert('Error generating PDF.');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
