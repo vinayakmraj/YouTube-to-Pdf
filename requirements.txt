@@ -4,6 +4,3 @@ pytube
 moviepy
 fpdf
 opencv-python
-
-// Install the dependencies:
-// pip install -r requirements.txt
